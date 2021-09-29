@@ -1,0 +1,24 @@
+{
+  "scripts": {
+    "dev": "next",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "^11.1.2",
+    "sass": "^1.42.1"
+  },
+  "devDependencies": {
+    "@types/react": "^17.0.21",
+    "eslint": "^7.32.0",
+    "prettier": "^2.4.1",
+    "react": "^17.0.2",
+    "react-dom": "^17.0.2",
+    "typescript": "^4.4.3"
+  },
+  "name": "next-npm",
+  "version": "1.0.0",
+  "repository": "https://github.com/SoraKumo001/next-npm",
+  "author": "SoraKumo <info@croud.jp>",
+  "license": "MIT"
+}
