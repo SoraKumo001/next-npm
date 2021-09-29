@@ -7,7 +7,7 @@ import { useRouter } from 'next/dist/client/router'
 const Npm = ({ name }: { name: string }) => {
   const period = ['last-year', 'last-week', 'last-day'] as const
   const [value, setValue] = useState<{
-    [key in typeof period extends [...infer R] ? R : never]: number
+    [key in typeof period extends ReadonlyArray<infer R> ? R : never]?: number
   }>({})
 
   useEffect(() => {
