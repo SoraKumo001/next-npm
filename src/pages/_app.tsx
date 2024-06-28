@@ -1,3 +1,4 @@
-import App from 'next/app'
-App.getInitialProps = async () => ({ pageProps: {} })
-export default App
+import "./global.css";
+import App from "next/app";
+App.getInitialProps = async () => ({ pageProps: {} });
+export default App;

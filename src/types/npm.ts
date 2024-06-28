@@ -1,14 +1,14 @@
-export interface NpmType {
-  objects: Object[];
-  total: number;
-  time: string;
-}
-
-export interface Object {
+export interface NpmObject {
   package: Package;
   score: Score;
   searchScore: number;
   flags?: Flags;
+}
+
+export interface NpmType {
+  objects: NpmObject[];
+  total: number;
+  time: string;
 }
 
 export interface Flags {
@@ -31,7 +31,7 @@ export interface Package {
 export interface Author {
   name: string;
   email?: string;
-  username?: String;
+  username?: string;
 }
 
 export interface Links {
