@@ -1,12 +1,6 @@
-import { SSRProvider } from "next-ssr";
-
 import { NpmList } from "../components/NpmList";
 
-const Page = () => {
-  return (
-    <SSRProvider>
-      <NpmList />
-    </SSRProvider>
-  );
+const Page = ({ host }: { host: string }) => {
+  return <NpmList host={host} />;
 };
 export default Page;

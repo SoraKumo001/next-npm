@@ -12,11 +12,7 @@ import {
 } from "react";
 import { NpmType, NpmUserType } from "../types/npm";
 
-const host = process.env.__NEXT_PRIVATE_ORIGIN
-  ? process.env.__NEXT_PRIVATE_ORIGIN
-  : "";
-
-export const NpmList = () => {
+export const NpmList = ({ host }: { host: string }) => {
   const router = useRouter();
   const name = String(router.query["name"] ?? "");
   const { data: value } = useSSR<[NpmType, NpmUserType]>(
@@ -52,7 +48,6 @@ export const NpmList = () => {
       });
     }
   }, [value]);
-  console.log(`${host}/user/?name=${name}`);
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -124,9 +119,9 @@ export const NpmList = () => {
             )}
           </tr>
         </thead>
-        <tbody>
+        <tbody className="[&_tr:nth-child(odd)]:bg-slate-200">
           {items?.map(({ name, date }, index) => (
-            <tr key={name} className="odd:bg-slate-200">
+            <tr key={name}>
               <td>{index + 1}</td>
               <td>{new Date(date).toLocaleString()}</td>
               <td>
