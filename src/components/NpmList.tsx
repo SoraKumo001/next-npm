@@ -1,7 +1,7 @@
 import Head from "next/head";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { SSRProvider, useSSR } from "next-ssr";
+import { useSSR } from "next-ssr";
 import {
   FormEventHandler,
   MouseEventHandler,
@@ -52,8 +52,11 @@ export const NpmList = ({ host }: { host?: string }) => {
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
-    router.push(`/?name=${e.currentTarget.maintainer.value}`);
-    router.replace({ query: { name, sort: sortIndex } });
+    const query: Record<string, string | number> = {
+      name: e.currentTarget.maintainer.value,
+    };
+    if (sortIndex) query["sort"] = sortIndex;
+    router.push({ query });
   };
   const handleClick: MouseEventHandler<HTMLElement> = (e) => {
     const index = e.currentTarget.dataset["index"];
@@ -105,7 +108,9 @@ export const NpmList = ({ host }: { host?: string }) => {
           className="input input-bordered w-full max-w-xs"
           defaultValue={name}
         />
-        <button className="btn">設定</button>
+        <button className="btn" type="submit">
+          設定
+        </button>
       </form>
 
       <table className="table [&_*]:border-gray-300 [&_td]:border-x [&_td]:py-1 [&_th:hover]:bg-slate-100 [&_th]:border-x">
