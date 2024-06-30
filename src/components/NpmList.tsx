@@ -15,15 +15,13 @@ import { NpmObject, NpmPackagesType, NpmUserType } from "../types/npm";
 
 const usePackages = (name: string, host?: string) => {
   const { data } = useSSR<[NpmPackagesType, NpmUserType] | undefined>(
-    async () =>
-      !name
-        ? undefined
-        : Promise.all([
-            fetch(
-              `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
-            ).then((r) => r.json()),
-            fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.json()),
-          ]),
+    () =>
+      Promise.all([
+        fetch(
+          `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
+        ).then((r) => r.json()),
+        fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.json()),
+      ]),
     { key: name }
   );
   return data;
@@ -58,10 +56,9 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
 export const NpmList = ({ host }: { host?: string }) => {
   const router = useRouter();
   const name =
-    typeof router.query["name"] === router.query["name"]
-      ? router.query["name"]
-      : "";
+    typeof router.query["name"] === "string" ? router.query["name"] : "";
   const value = usePackages(name, host);
+
   const downloads = usePackageDownloads(value?.[0].objects);
   const sortIndex = Number(router.query["sort"] || "0");
 
