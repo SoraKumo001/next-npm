@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "next": "^14.2.4",
-    "next-ssr": "^0.0.9"
+    "next-ssr": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "20.14.9",
@@ -33,5 +33,6 @@
   "version": "1.0.0",
   "repository": "https://github.com/SoraKumo001/next-npm",
   "author": "SoraKumo <info@croud.jp>",
-  "license": "MIT"
+  "license": "MIT",
+  "main": "index.js"
 }

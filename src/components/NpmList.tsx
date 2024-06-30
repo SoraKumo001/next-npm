@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import { DateString } from "../libs/DateString";
-import { NpmObject, NpmPackagesType, NpmUserType } from "../types/npm";
+import { NpmObject, NpmPackagesType } from "../types/npm";
 
 const usePackages = (name: string, host?: string) => {
   const { data } = useSSR<[NpmPackagesType, string] | undefined>(

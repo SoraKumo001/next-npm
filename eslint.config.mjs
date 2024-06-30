@@ -11,7 +11,6 @@ export default [
   eslint.configs.recommended,
   ...tslint.configs.recommended,
   ...tailwind.configs["flat/recommended"],
-  {},
   {
     plugins: { import: importPlugin },
   },
