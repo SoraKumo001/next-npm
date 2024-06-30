@@ -7,7 +7,8 @@
     "lint:fix": "eslint --fix ./src"
   },
   "dependencies": {
-    "next": "^14.2.4"
+    "next": "^14.2.4",
+    "next-ssr": "^0.0.9"
   },
   "devDependencies": {
     "@types/node": "20.14.9",
