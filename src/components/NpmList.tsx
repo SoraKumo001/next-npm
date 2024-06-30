@@ -14,13 +14,13 @@ import { DateString } from "../libs/DateString";
 import { NpmObject, NpmPackagesType, NpmUserType } from "../types/npm";
 
 const usePackages = (name: string, host?: string) => {
-  const { data } = useSSR<[NpmPackagesType, NpmUserType] | undefined>(
+  const { data } = useSSR<[NpmPackagesType, string] | undefined>(
     () =>
       Promise.all([
         fetch(
           `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
         ).then((r) => r.json()),
-        fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.json()),
+        fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.text()),
       ]),
     { key: name }
   );
@@ -100,8 +100,8 @@ export const NpmList = ({ host }: { host?: string }) => {
   const systemDescription = name
     ? `Number of npm packages is ${value?.[0].objects.length ?? 0}`
     : "System for listing npm packages";
-  const image = value?.[1].scope?.parent.avatars.large;
-  const imageUrl = image ? `https://www.npmjs.com${image}` : undefined;
+  const imageUrl = value?.[1];
+
   return (
     <>
       <Head>
@@ -126,6 +126,7 @@ export const NpmList = ({ host }: { host?: string }) => {
         <Link
           href="https://github.com/SoraKumo001/next-npm"
           className="underline"
+          target="_blank"
         >
           Source Code
         </Link>
