@@ -10,6 +10,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { DateString } from "../libs/DateString";
 import { NpmType, NpmUserType } from "../types/npm";
 
 export const NpmList = ({ host }: { host: string }) => {
@@ -123,7 +124,7 @@ export const NpmList = ({ host }: { host: string }) => {
           {items?.map(({ name, date }, index) => (
             <tr key={name}>
               <td>{index + 1}</td>
-              <td>{new Date(date).toLocaleString()}</td>
+              <td>{DateString(date)}</td>
               <td>
                 <Link
                   href={`https://www.npmjs.com/package/${name}`}
