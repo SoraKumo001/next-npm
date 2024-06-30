@@ -11,27 +11,30 @@ import {
   useState,
 } from "react";
 import { DateString } from "../libs/DateString";
-import { NpmType, NpmUserType } from "../types/npm";
+import { NpmObject, NpmPackagesType, NpmUserType } from "../types/npm";
 
-export const NpmList = ({ host }: { host?: string }) => {
-  const router = useRouter();
-  const name = String(router.query["name"] ?? "");
-  const { data: value } = useSSR<[NpmType, NpmUserType]>(
-    () =>
-      Promise.all([
-        fetch(
-          `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
-        ).then((r) => r.json()),
-        fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.json()),
-      ]),
+const usePackages = (name: string, host?: string) => {
+  const { data } = useSSR<[NpmPackagesType, NpmUserType] | undefined>(
+    async () =>
+      !name
+        ? undefined
+        : Promise.all([
+            fetch(
+              `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
+            ).then((r) => r.json()),
+            fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.json()),
+          ]),
     { key: name }
   );
+  return data;
+};
+
+const usePackageDownloads = (objects?: NpmObject[]) => {
   const [downloads, setDownloads] = useState<Record<string, number[]>>({});
   const downloadsDelay = useDeferredValue(downloads);
-  const sortIndex = Number(router.query["sort"] || "0");
   useEffect(() => {
-    if (value) {
-      value[0].objects.forEach((npm) => {
+    if (objects) {
+      objects.forEach((npm) => {
         const name = npm.package.name;
         setDownloads((v) => ({ ...v, [name]: Array(3).fill(undefined) }));
         const periods = ["last-year", "last-week", "last-day"] as const;
@@ -48,7 +51,19 @@ export const NpmList = ({ host }: { host?: string }) => {
         });
       });
     }
-  }, [value]);
+  }, [objects]);
+  return downloadsDelay;
+};
+
+export const NpmList = ({ host }: { host?: string }) => {
+  const router = useRouter();
+  const name =
+    typeof router.query["name"] === router.query["name"]
+      ? router.query["name"]
+      : "";
+  const value = usePackages(name, host);
+  const downloads = usePackageDownloads(value?.[0].objects);
+  const sortIndex = Number(router.query["sort"] || "0");
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
@@ -77,12 +92,12 @@ export const NpmList = ({ host }: { host?: string }) => {
           case 4:
           case 5:
             return (
-              (downloadsDelay[b.name]?.[sortIndex - 3] ?? 0) -
-              (downloadsDelay[a.name]?.[sortIndex - 3] ?? 0)
+              (downloads[b.name]?.[sortIndex - 3] ?? 0) -
+              (downloads[a.name]?.[sortIndex - 3] ?? 0)
             );
         }
       });
-  }, [value, sortIndex, downloadsDelay]);
+  }, [value, sortIndex, downloads]);
 
   const title = name ? `${name} npm packages list` : "List of npm packages";
   const systemDescription = name
@@ -91,7 +106,7 @@ export const NpmList = ({ host }: { host?: string }) => {
   const image = value?.[1].scope?.parent.avatars.large;
   const imageUrl = image ? `https://www.npmjs.com${image}` : undefined;
   return (
-    <div>
+    <>
       <Head>
         <title>{`${name} npm list`}</title>
         <meta property="description" content={systemDescription} />
@@ -102,7 +117,7 @@ export const NpmList = ({ host }: { host?: string }) => {
         <meta name="twitter:card" content={"summary"} />
       </Head>
 
-      <form onSubmit={handleSubmit} className="flex gap-2 p-1">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 p-1">
         <input
           name="maintainer"
           className="input input-bordered w-full max-w-xs"
@@ -111,6 +126,12 @@ export const NpmList = ({ host }: { host?: string }) => {
         <button className="btn" type="submit">
           設定
         </button>
+        <Link
+          href="https://github.com/SoraKumo001/next-npm"
+          className="underline"
+        >
+          Source Code
+        </Link>
       </form>
 
       <table className="table [&_*]:border-gray-300 [&_td]:border-x [&_td]:py-1 [&_th:hover]:bg-slate-100 [&_th]:border-x">
@@ -143,6 +164,6 @@ export const NpmList = ({ host }: { host?: string }) => {
           ))}
         </tbody>
       </table>
-    </div>
+    </>
   );
 };

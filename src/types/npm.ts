@@ -5,7 +5,7 @@ export interface NpmObject {
   flags?: Flags;
 }
 
-export interface NpmType {
+export interface NpmPackagesType {
   objects: NpmObject[];
   total: number;
   time: string;
