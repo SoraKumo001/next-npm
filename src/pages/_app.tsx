@@ -4,7 +4,6 @@ import "./global.css";
 import { SSRProvider } from "next-ssr";
 
 const App = ({ Component, pageProps }: AppProps<{ host?: string }>) => {
-  const { host } = pageProps;
   return (
     <SSRProvider>
       <Component {...pageProps} />

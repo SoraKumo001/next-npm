@@ -13,7 +13,7 @@ import {
 import { DateString } from "../libs/DateString";
 import { NpmType, NpmUserType } from "../types/npm";
 
-export const NpmList = ({ host }: { host: string }) => {
+export const NpmList = ({ host }: { host?: string }) => {
   const router = useRouter();
   const name = String(router.query["name"] ?? "");
   const { data: value } = useSSR<[NpmType, NpmUserType]>(
@@ -22,7 +22,7 @@ export const NpmList = ({ host }: { host: string }) => {
         fetch(
           `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
         ).then((r) => r.json()),
-        fetch(`${host}/user/?name=${name}`).then((r) => r.json()),
+        fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.json()),
       ]),
     { key: name }
   );
