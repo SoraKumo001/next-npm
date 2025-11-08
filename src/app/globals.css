@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@plugin "daisyui" {
+  include: input, button, checkbox, toggle, modal, theme;
+}
 
 @theme {
   --font-sans:

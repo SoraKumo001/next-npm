@@ -1,7 +1,6 @@
-import Head from "next/head";
+"use client";
 import Link from "next/link";
-import { useRouter } from "next/router";
-import { useSSR } from "next-ssr";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   FormEventHandler,
   MouseEventHandler,
@@ -13,6 +12,7 @@ import {
 import { DateString } from "../libs/DateString";
 import { NpmObject, NpmPackagesType } from "../types/npm";
 import { semaphore } from "@node-libraries/semaphore";
+import { useSSR } from "next-ssr";
 
 const s = semaphore();
 
@@ -23,7 +23,7 @@ const usePackages = (name: string, host?: string) => {
         fetch(
           `https://registry.npmjs.org/-/v1/search?text=maintainer:${name}&size=1000`
         ).then((r) => r.json()),
-        fetch(`${host ?? ""}/user/?name=${name}`).then((r) => r.text()),
+        fetch(`${host ?? ""}/user?name=${name}`).then((r) => r.text()),
       ]),
     { key: name }
   );
@@ -61,24 +61,33 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
 
 export const NpmList = ({ host }: { host?: string }) => {
   const router = useRouter();
-  const name =
-    typeof router.query["name"] === "string" ? router.query["name"] : "";
+  const searchParams = useSearchParams();
+  const name = searchParams.get("name") || "";
   const value = usePackages(name, host);
 
   const downloads = usePackageDownloads(value?.[0].objects);
-  const sortIndex = Number(router.query["sort"] || "0");
+  const sortIndex = Number(searchParams.get("sort") || "0");
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault();
-    const query: Record<string, string | number> = {
-      name: e.currentTarget.maintainer.value,
-    };
-    if (sortIndex) query["sort"] = sortIndex;
-    router.push({ query });
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    newSearchParams.set("name", e.currentTarget.maintainer.value);
+    if (sortIndex) {
+      newSearchParams.set("sort", String(sortIndex));
+    } else {
+      newSearchParams.delete("sort");
+    }
+    router.push(`?${newSearchParams.toString()}`);
   };
   const handleClick: MouseEventHandler<HTMLElement> = (e) => {
     const index = e.currentTarget.dataset["index"];
-    router.replace({ query: { name, sort: index } });
+    const newSearchParams = new URLSearchParams(searchParams.toString());
+    if (index) {
+      newSearchParams.set("sort", index);
+    } else {
+      newSearchParams.delete("sort");
+    }
+    router.replace(`?${newSearchParams.toString()}`);
   };
   const items = useMemo(() => {
     return value?.[0].objects
@@ -110,16 +119,13 @@ export const NpmList = ({ host }: { host?: string }) => {
 
   return (
     <>
-      <Head>
-        <title>{`${name} npm list`}</title>
-        <meta property="description" content={systemDescription} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={systemDescription} />
-        <meta property="og:type" content="website" />
-        <meta property="og:image" content={imageUrl} />
-        <meta name="twitter:card" content={"summary"} />
-      </Head>
-
+      <title>{`${name} npm list`}</title>
+      <meta property="description" content={systemDescription} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={systemDescription} />
+      <meta property="og:type" content="website" />
+      <meta property="og:image" content={imageUrl} />
+      <meta name="twitter:card" content={"summary"} />
       <form onSubmit={handleSubmit} className="flex items-center gap-2 p-1">
         <input
           name="maintainer"
@@ -138,7 +144,7 @@ export const NpmList = ({ host }: { host?: string }) => {
         </Link>
       </form>
 
-      <table className="table [&_*]:border-gray-300 [&_td]:border-x [&_td]:py-1 [&_th:hover]:bg-slate-100 [&_th]:border-x">
+      <table className="table [&_*]:border-gray-300 [&_td]:border-x [&_td]:py-1 [&_th:hover]:bg-slate-100 [&_th]:border-x [&_th]:p-2">
         <thead>
           <tr className="sticky top-0 cursor-pointer bg-white text-lg font-semibold">
             {["index", "date", "name", "year", "week", "day"].map(
