@@ -14,7 +14,7 @@ import { NpmObject, NpmPackagesType } from "../types/npm";
 import { semaphore } from "@node-libraries/semaphore";
 import { useSSR } from "next-ssr";
 
-const s = semaphore();
+const s = semaphore(4);
 
 const usePackages = (name: string, host?: string) => {
   const { data } = useSSR<[NpmPackagesType, string] | undefined>(
@@ -41,15 +41,24 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
         const periods = ["last-year", "last-week", "last-day"] as const;
         periods.forEach(async (period, index) => {
           await s.acquire();
-          await fetch(`https://api.npmjs.org/downloads/point/${period}/${name}`)
+          const value = await fetch(
+            `https://api.npmjs.org/downloads/point/${period}/${name}`
+          )
             .then((r) => r.json())
             .then((r) => {
-              setDownloads((v) => {
-                const d: number[] = v[name] ?? [];
-                d[index] = r.downloads;
-                return { ...v, [name]: d };
-              });
+              return r.downloads;
+            })
+            .catch(() => undefined);
+          if (value) {
+            setDownloads((v) => {
+              const d: number[] = v[name] ?? [];
+              d[index] = value;
+              return { ...v, [name]: d };
             });
+          }
+          if (!value) {
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+          }
           s.release();
         });
         await s.all();
@@ -144,7 +153,7 @@ export const NpmList = ({ host }: { host?: string }) => {
         </Link>
       </form>
 
-      <table className="table [&_*]:border-gray-300 [&_td]:border-x [&_td]:py-1 [&_th:hover]:bg-slate-100 [&_th]:border-x [&_th]:p-2">
+      <table className="table [&_*]:border-gray-300 [&_td]:border-x [&_td]:p-1 [&_th:hover]:bg-slate-100 [&_th]:border-x [&_th]:p-2 w-full">
         <thead>
           <tr className="sticky top-0 cursor-pointer bg-white text-lg font-semibold">
             {["index", "date", "name", "year", "week", "day"].map(
