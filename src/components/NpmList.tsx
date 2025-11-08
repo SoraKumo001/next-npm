@@ -12,6 +12,9 @@ import {
 } from "react";
 import { DateString } from "../libs/DateString";
 import { NpmObject, NpmPackagesType } from "../types/npm";
+import { semaphore } from "@node-libraries/semaphore";
+
+const s = semaphore();
 
 const usePackages = (name: string, host?: string) => {
   const { data } = useSSR<[NpmPackagesType, string] | undefined>(
@@ -32,12 +35,13 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
   const downloadsDelay = useDeferredValue(downloads);
   useEffect(() => {
     if (objects) {
-      objects.forEach((npm) => {
+      objects.forEach(async (npm) => {
         const name = npm.package.name;
         setDownloads((v) => ({ ...v, [name]: Array(3).fill(undefined) }));
         const periods = ["last-year", "last-week", "last-day"] as const;
-        periods.forEach((period, index) => {
-          fetch(`https://api.npmjs.org/downloads/point/${period}/${name}`)
+        periods.forEach(async (period, index) => {
+          await s.acquire();
+          await fetch(`https://api.npmjs.org/downloads/point/${period}/${name}`)
             .then((r) => r.json())
             .then((r) => {
               setDownloads((v) => {
@@ -46,7 +50,9 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
                 return { ...v, [name]: d };
               });
             });
+          s.release();
         });
+        await s.all();
       });
     }
   }, [objects]);
@@ -157,7 +163,9 @@ export const NpmList = ({ host }: { host?: string }) => {
                   {name}
                 </Link>
               </td>
-              {downloads[name]?.map((v, index) => <td key={index}>{v}</td>)}
+              {downloads[name]?.map((v, index) => (
+                <td key={index}>{v}</td>
+              ))}
             </tr>
           ))}
         </tbody>

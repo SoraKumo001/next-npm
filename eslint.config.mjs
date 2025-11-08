@@ -1,20 +1,29 @@
-/**
- * @type {import('eslint').Linter.FlatConfig[]}
- */
+import { fixupPluginRules } from "@eslint/compat";
 import eslint from "@eslint/js";
 import eslintConfigPrettier from "eslint-config-prettier";
 import importPlugin from "eslint-plugin-import";
-import tailwind from "eslint-plugin-tailwindcss";
+import react from "eslint-plugin-react";
+import reactHooks from "eslint-plugin-react-hooks";
+import eslintPluginBetterTailwindcss from "eslint-plugin-better-tailwindcss";
 import tslint from "typescript-eslint";
 
 export default [
   eslint.configs.recommended,
   ...tslint.configs.recommended,
-  ...tailwind.configs["flat/recommended"],
+  eslintConfigPrettier,
   {
-    plugins: { import: importPlugin },
+    plugins: { react: fixupPluginRules(react) },
+    rules: react.configs["jsx-runtime"].rules,
   },
   {
+    plugins: {
+      "react-hooks": reactHooks,
+      "better-tailwindcss": eslintPluginBetterTailwindcss,
+    },
+    rules: reactHooks.configs.recommended.rules,
+  },
+  {
+    plugins: { import: importPlugin },
     rules: {
       "@typescript-eslint/no-unused-vars": 0,
       "no-empty-pattern": 0,
@@ -32,13 +41,9 @@ export default [
             "index",
           ],
           pathGroupsExcludedImportTypes: ["builtin"],
-          alphabetize: {
-            order: "asc",
-            caseInsensitive: true,
-          },
+          alphabetize: { order: "asc", caseInsensitive: true },
         },
       ],
     },
   },
-  eslintConfigPrettier,
 ];
