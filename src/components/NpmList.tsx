@@ -59,7 +59,7 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
       });
 
       // 429時のバックオフリトライ機能付き fetch
-      const fetchWithRetry = async (url: string, retries = 5, initialDelay = 2000): Promise<unknown> => {
+      const fetchWithRetry = async (url: string, retries = 5, initialDelay = 5000): Promise<unknown> => {
         let delay = initialDelay;
         for (let i = 0; i < retries; i++) {
           try {
@@ -67,7 +67,7 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
             if (res.status === 429) {
               console.warn(`429 Too Many Requests on ${url}. Waiting ${delay}ms before retry ${i + 1}/${retries}...`);
               await new Promise((resolve) => setTimeout(resolve, delay));
-              delay *= 1.5; // 指数バックオフ
+              delay *= 2; // 指数バックオフ (2倍)
               continue;
             }
             if (!res.ok) {
@@ -78,7 +78,7 @@ const usePackageDownloads = (objects?: NpmObject[]) => {
             console.error(`Fetch error on ${url}:`, err);
             if (i === retries - 1) throw err;
             await new Promise((resolve) => setTimeout(resolve, delay));
-            delay *= 1.5;
+            delay *= 2;
           }
         }
       };
