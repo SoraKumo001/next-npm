@@ -1,6 +1,8 @@
 "use client";
+import { semaphore } from "@node-libraries/semaphore";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSSR } from "next-ssr";
 import {
   FormEventHandler,
   MouseEventHandler,
@@ -11,8 +13,6 @@ import {
 } from "react";
 import { DateString } from "../libs/DateString";
 import { NpmObject, NpmPackagesType } from "../types/npm";
-import { semaphore } from "@node-libraries/semaphore";
-import { useSSR } from "next-ssr";
 
 const s = semaphore(4);
 
@@ -31,40 +31,120 @@ const usePackages = (name: string, host?: string) => {
 };
 
 const usePackageDownloads = (objects?: NpmObject[]) => {
+  const [prevObjects, setPrevObjects] = useState(objects);
   const [downloads, setDownloads] = useState<Record<string, number[]>>({});
+
+  // objects が変わったら downloads をクリアする（レンダリング中に状態調整）
+  if (objects !== prevObjects) {
+    setPrevObjects(objects);
+    setDownloads({});
+  }
+
   const downloadsDelay = useDeferredValue(downloads);
+
   useEffect(() => {
     if (objects) {
-      objects.forEach(async (npm) => {
+      const periods = ["last-year", "last-week", "last-day"] as const;
+
+      // スコープ付きとスコープなしに分類
+      const scoped: string[] = [];
+      const unscoped: string[] = [];
+      objects.forEach((npm) => {
         const name = npm.package.name;
-        setDownloads((v) => ({ ...v, [name]: Array(3).fill(undefined) }));
-        const periods = ["last-year", "last-week", "last-day"] as const;
-        periods.forEach(async (period, index) => {
+        if (name.startsWith("@")) {
+          scoped.push(name);
+        } else {
+          unscoped.push(name);
+        }
+      });
+
+      // 429時のバックオフリトライ機能付き fetch
+      const fetchWithRetry = async (url: string, retries = 5, initialDelay = 2000): Promise<unknown> => {
+        let delay = initialDelay;
+        for (let i = 0; i < retries; i++) {
+          try {
+            const res = await fetch(url);
+            if (res.status === 429) {
+              console.warn(`429 Too Many Requests on ${url}. Waiting ${delay}ms before retry ${i + 1}/${retries}...`);
+              await new Promise((resolve) => setTimeout(resolve, delay));
+              delay *= 1.5; // 指数バックオフ
+              continue;
+            }
+            if (!res.ok) {
+              throw new Error(`HTTP error! status: ${res.status}`);
+            }
+            return await res.json();
+          } catch (err) {
+            console.error(`Fetch error on ${url}:`, err);
+            if (i === retries - 1) throw err;
+            await new Promise((resolve) => setTimeout(resolve, delay));
+            delay *= 1.5;
+          }
+        }
+      };
+
+      periods.forEach((period, index) => {
+        // 1. スコープなしパッケージの一括（バルク）取得
+        if (unscoped.length > 0) {
+          (async () => {
+            const chunkSize = 100;
+            for (let i = 0; i < unscoped.length; i += chunkSize) {
+              const chunk = unscoped.slice(i, i + chunkSize);
+              const url = `https://api.npmjs.org/downloads/point/${period}/${chunk.join(",")}`;
+
+              await s.acquire();
+              try {
+                const value = await fetchWithRetry(url);
+                if (value && typeof value === "object" && !("error" in value)) {
+                  const data = value as Record<string, { downloads?: number } | undefined>;
+                  setDownloads((v) => {
+                    const next = { ...v };
+                    chunk.forEach((name) => {
+                      const item = data[name];
+                      if (item && typeof item.downloads === "number") {
+                        const d = next[name] ? [...next[name]] : Array(3).fill(undefined);
+                        d[index] = item.downloads;
+                        next[name] = d;
+                      }
+                    });
+                    return next;
+                  });
+                }
+              } catch (err) {
+                console.error(`Failed to fetch bulk downloads for chunk after retries:`, chunk, err);
+              } finally {
+                s.release();
+              }
+            }
+          })();
+        }
+
+        // 2. スコープ付きパッケージの個別取得
+        scoped.forEach(async (name) => {
           await s.acquire();
-          const value = await fetch(
-            `https://api.npmjs.org/downloads/point/${period}/${name}`
-          )
-            .then((r) => r.json())
-            .then((r) => {
-              return r.downloads;
-            })
-            .catch(() => undefined);
-          if (value) {
-            setDownloads((v) => {
-              const d: number[] = v[name] ?? [];
-              d[index] = value;
-              return { ...v, [name]: d };
-            });
+          const url = `https://api.npmjs.org/downloads/point/${period}/${name}`;
+          try {
+            const value = await fetchWithRetry(url);
+            if (value && typeof value === "object" && "downloads" in value) {
+              const data = value as { downloads: unknown };
+              if (typeof data.downloads === "number") {
+                setDownloads((v) => {
+                  const d = v[name] ? [...v[name]] : Array(3).fill(undefined);
+                  d[index] = data.downloads as number;
+                  return { ...v, [name]: d };
+                });
+              }
+            }
+          } catch (err) {
+            console.error(`Failed to fetch downloads for ${name} after retries:`, err);
+          } finally {
+            s.release();
           }
-          if (!value) {
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-          }
-          s.release();
         });
-        await s.all();
       });
     }
   }, [objects]);
+
   return downloadsDelay;
 };
 
@@ -178,7 +258,7 @@ export const NpmList = ({ host }: { host?: string }) => {
                   {name}
                 </Link>
               </td>
-              {downloads[name]?.map((v, index) => (
+              {(downloads[name] ?? Array(3).fill(undefined)).map((v, index) => (
                 <td key={index}>{v}</td>
               ))}
             </tr>
